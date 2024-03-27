@@ -1,0 +1,104 @@
+---
+- name: Manage iptables rules
+  hosts:
+    - firewall
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Create working chains
+      ansible.builtin.iptables:
+        chain: "{{ item }}"
+        chain_management: true
+      with_items:
+        - monitoring
+        - ssh-protect
+        - app_protect
+
+    - name: Allow loopback traffic
+      ansible.builtin.iptables:
+        chain: INPUT
+        in_interface: lo
+        jump: ACCEPT
+
+    - name: Allow established connections
+      ansible.builtin.iptables:
+        chain: INPUT
+        ctstate: RELATED,ESTABLISHED
+        jump: ACCEPT
+      become: true
+
+    - name: Add whitelisted IPs to monitoring chain
+      ansible.builtin.iptables:
+        chain: monitoring
+        src_range: 192.168.122.1-192.168.122.110
+        jump: ACCEPT
+
+    - name: Set the policy REJECT for the monitoring chain
+      ansible.builtin.iptables:
+        chain: monitoring
+        jump: REJECT
+
+    - name: Allow traffic on specified ports for monitoring
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item }}"
+        jump: monitoring
+      with_items:
+        - 8082
+        - 8345
+        - 5252
+
+    - name: Add whitelisted IPs to ssh-protect chain
+      ansible.builtin.iptables:
+        chain: ssh-protect
+        src_range: 192.168.122.1-192.168.122.110
+        jump: ACCEPT
+
+    - name: Set the policy DROP for the ssh-protect chain
+      ansible.builtin.iptables:
+        chain: ssh-protect
+        jump: DROP
+
+    - name: Allow traffic on specified ports for ssh-protect
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item }}"
+        jump: ssh-protect
+      with_items:
+        - 22
+        - 2244
+
+    - name: Add whitelisted IPs to app_protect chain
+      ansible.builtin.iptables:
+        chain: app_protect
+        src_range: 192.168.122.1-192.168.122.110
+        jump: ACCEPT
+
+    - name: Set the policy REJECT for the app_protect chain
+      ansible.builtin.iptables:
+        chain: app_protect
+        jump: REJECT
+
+    - name: Allow traffic on specified ports for app_protect
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item }}"
+        jump: app_protect
+      with_items:
+          - 6073
+          - 8080
+          - 4670
+
+    - name: Set the policy for the default chains to DROP
+      ansible.builtin.iptables:
+        chain: "{{ item }}"
+        policy: ACCEPT
+      with_items:
+        - OUTPUT
+        - FORWARD
+
+    - name: Save V4 iptables rules
+      shell: 'iptables-save > /etc/iptables/rules.v4'

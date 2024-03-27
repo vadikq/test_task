@@ -1,0 +1,64 @@
+---
+- name: Manage iptables rules
+  hosts:
+    - firewall
+  become: true
+  gather_facts: true
+  vars:
+    iptables:
+      rules:
+        v4: |
+
+          *filter
+          :INPUT DROP [0:0]
+          -A INPUT -i lo -j ACCEPT
+          -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+          -N monitoring
+          -A monitoring -m iprange --src-range 192.168.122.1-192.168.122.11 -j ACCEPT
+          -A monitoring -j REJECT
+
+          -A INPUT -p tcp --dport 8082 -j monitoring
+          -A INPUT -p tcp --dport 8345 -j monitoring
+          -A INPUT -p tcp --dport 5252 -j monitoring
+          
+          -N ssh-protect
+          -A ssh-protect -m iprange --src-range 192.168.4.1-192.168.4.11 -j ACCEPT
+          -A ssh-protect -j DROP
+
+          -A INPUT -p tcp --dport 22 -j ssh-protect
+          -A INPUT -p tcp --dport 2244 -j ssh-protect
+
+          -N app_protect
+          -A app_protect -m iprange --src-range 192.168.4.1-192.168.4.11 -j ACCEPT
+          -A app_protect -j REJECT
+
+          -A INPUT -p tcp --dport 6073 -j app_protect
+          -A INPUT -p tcp --dport 8080 -j app_protect
+          -A INPUT -p tcp --dport 4670 -j app_protect
+
+          :OUTPUT ACCEPT [0:0]
+          :FORWARD DROP [0:0]
+          -A FORWARD -j ACCEPT
+          COMMIT
+  tasks:
+    - name: Ensure iptables packages present
+      ansible.builtin.apt:
+        name:
+          - iptables
+          - iptables-persistent
+        state: present
+
+    - name: Ensure iptables V4 rules present
+      ansible.builtin.template:
+        src: 'templates/rules.v4.j2'
+        dest: '/etc/iptables/rules.v4'
+        owner: root
+        group: root
+        mode: 0644
+      no_log: true
+      with_items:
+        - "{{ iptables.rules.v4 }}"
+
+    - name: Apply V4 iptables rules
+      ansible.builtin.shell: 'iptables-restore < /etc/iptables/rules.v4'
