@@ -16,5 +16,4 @@ iptables_persistent.yml Using iptables-restore and manage iptables rules from fi
 
 [![TEST img](https://ibb.co/F419LxS)
 
-[![TEST img2]([https://i.ibb.co/image.png](https://upload.wikimedia.org/wikipedia/commons/6/6a/PNG_Test.png))]
-
+[![TEST img2](https://upload.wikimedia.org/wikipedia/commons/6/6a/PNG_Test.png)]
