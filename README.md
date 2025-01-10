@@ -15,3 +15,6 @@ iptables_persistent.yml Using iptables-restore and manage iptables rules from fi
 [![Ansible for DevOps Cover](https://s3.amazonaws.com/titlepages.leanpub.com/ansible-for-devops/medium)](https://www.ansiblefordevops.com/)
 
 [![TEST img](https://ibb.co/F419LxS)
+
+[![TEST img2](https://i.ibb.co/image.png)]
+
